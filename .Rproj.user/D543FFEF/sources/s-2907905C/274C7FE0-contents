@@ -1,0 +1,91 @@
+## Get GTEX-TCGA-TARGET peptide expression levels
+
+
+library(tidyverse)
+library(stringr)
+
+table(ttgl$detailed_category, ttgl$X_study)
+
+bbb = read.table("./data/AMRgenes.txt", sep = "t")
+
+bbb = str_split(bbb$V1, pattern = " ")
+
+ttgl$detailed_category = factor(ttgl$detailed_category, 
+                                 levels=c("Adipose - Subcutaneous",
+                                          "Adipose - Visceral (Omentum)",
+                                          "Adrenal Gland","Adrenocortical Cancer",
+                                          "Artery - Aorta",
+                                          "Artery - Coronary",
+                                          "Artery - Tibial",
+                                          "Bladder","Bladder Urothelial Carcinoma",
+                                          "Brain - Amygdala","Brain - Anterior Cingulate Cortex (Ba24)",
+                                          "Brain - Caudate (Basal Ganglia)","Cerebellar Hemisphere",
+                                          "Brain - Cerebellum","Brain - Cortex",
+                                          "Brain - Frontal Cortex (Ba9) ","Brain - Hippocampus",
+                                          "Brain - Hypothalamus","Brain - Nucleus Accumbens (Basal Ganglia)",
+                                          "Brain - Putamen (Basal Ganglia)","Brain - Spinal Cord (Cervical C-1)",
+                                          "Brain - Substantia Nigra","Brain Lower Grade Glioma","Glioblastoma Multiforme",
+                                          "Neuroblastoma",
+                                          "Breast - Mammary Tissue","Breast Invasive Carcinoma",
+                                          "Cells - Ebv-Transformed Lymphocytes","Cells - Transformed Fibroblasts",
+                                          "Cervix - Ectocervix","Cervix - Endocervix","Cervical & Endocervical Cancer",
+                                          "Colon - Sigmoid","Colon - Transverse","Colon Adenocarcinoma","Rectum Adenocarcinoma",
+                                          "Esophagus - Gastroesophageal Junction","Esophagus - Mucosa",
+                                          "Esophagus - Muscularis","Esophageal Carcinoma","Head & Neck Squamous Cell Carcinoma",
+                                          "Fallopian Tube",
+                                          "Heart - Atrial Appendage",
+                                          "Heart - Left Ventricle",
+                                          "Kidney - Cortex","Clear Cell Sarcoma Of The Kidney","Kidney Chromophobe",
+                                          "Kidney Clear Cell Carcinoma","Kidney Papillary Cell Carcinoma","Kidney, Rhabdoid Tumor",
+                                          "Pheochromocytoma & Paraganglioma",
+                                          "Liver","Cholangiocarcinoma","Liver Hepatocellular Carcinoma ",
+                                          "Lung","Lung Adenocarcinoma","Lung Squamous Cell Carcinoma","Mesothelioma",
+                                          "Minor Salivary Gland",
+                                          "Muscle - Skeletal",
+                                          "Nerve - Tibial",
+                                          "Ovary","Ovarian Serous Cystadenocarcinoma",
+                                          "Pancreas","Pancreatic Adenocarcinoma",
+                                          "Pituitary",
+                                          "Prostate","Prostate Adenocarcinoma",
+                                          "Skin - Not Sun Exposed (Suprapubic)","Skin - Sun Exposed (Lower Leg)",
+                                          "Skin Cutaneous Melanoma",
+                                          "Small Intestine - Terminal Ileum","",
+                                          "Spleen",
+                                          "Stomach","Stomach Adenocarcinoma",
+                                          "Testis","Testicular Germ Cell Tumor",
+                                          "Thyroid","Thyroid Carcinoma",
+                                          "Uterus","Uterine Carcinosarcoma","Uterine Corpus Endometrioid Carcinoma",
+                                          "Vagina","Uveal Melanoma",
+                                          "Whole blood","Acute Lymphoblastic Leukemia",
+                                          "Acute Myeloid Leukemia","Acute Myeloid Leukemia, Induction Failure Subproject",
+                                          "Diffuse Large B-Cell Lymphoma ",
+                                          "Thymoma",'Wilms Tumor'))
+
+for (target_gene in bbb) {
+  ccc <- ggplot(ttgl, aes(x = detailed_category, y = get(target_gene), color = X_study)) +
+    geom_jitter(size = 0.8, width = 0.3, alpha = 0.3, group = ttgl$X_study) +
+    geom_boxplot(color = "black", fill = "transparent", size = 0.3, outlier.alpha = 0) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    theme(axis.title = element_text(face = "bold", size = 12, color = "black"), 
+          axis.text.x = element_text(size = 10, color = "black"), axis.text.y = element_text(size = 10)) +
+    coord_cartesian(ylim = c(0, 18)) +
+    labs(x ="Tissue type", y = paste(target_gene, "expression level")) + 
+    theme(panel.grid.major.x = element_blank()) +
+    scale_color_manual(values = c("green", "black", "red"))
+  ggsave(filename = paste0(target_gene, ".pdf"), plot = ccc, device = "pdf", 
+         path = "./data_output/targets/", dpi = "print", width = 35, height = 19, units = "cm")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

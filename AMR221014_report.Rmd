@@ -1,0 +1,506 @@
+---
+title: "AMR221014_report"
+author: "Marion Hardy"
+date: "2023-05-03"
+output: 
+  html_document:
+    toc: true 
+    theme: spacelab 
+    highlight: monochrome
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, cache = TRUE, echo = FALSE, warning = F, cache.lazy = F)
+knitr::opts_chunk$set(fig.width=10, fig.height=15) 
+
+library(tidyverse)
+library(ggrepel)
+library(clusterProfiler)
+library(msigdbr)
+library(readxl)
+
+```
+
+```{r Data loading, include=FALSE}
+
+res_tbl <- read_csv("./data_output/res_tbl.csv")
+diff <- read_csv("./data_output/sign_different.csv")
+res_tbl1 <-  res_tbl %>% filter(!is.na(ENTREZID), padj<0.05)
+
+```
+
+# Introduction
+
+Data from Sophie's samples (human cells)
+
+-   Conditions: treated w/ or w/o H2O2
+
+-   Biological replicates (4, each at a different date)
+
+
+# Volcano plot 
+
+```{r, fig.height = 12, fig.width = 15}
+
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.05&log2FoldChange>=1|
+                              padj<0.05&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  labs(col="Significantly expressed")+
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  geom_text_repel(max.overlaps = 30)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()
+
+
+```
+
+# GSEA analysis
+
+Gene set enrichment analysis using
+- pval < 0,05
+- pval < 0,001
+
+## Filtering on pval < 0,05
+
+```{r}
+ordered_genes_fc <- res_tbl1$log2FoldChange
+names(ordered_genes_fc) <- res_tbl1$gene
+ordered_genes_fc <- sort(ordered_genes_fc, decreasing = T)
+
+```
+
+### Gene ontology (Biological process and Molecular function)
+
+```{r }
+
+# MsigDb
+
+hsa_GOBP_sets <- msigdbr(
+  species = "Homo sapiens", 
+  category = "C5",
+  subcategory = "GO:BP") # for reactome collection
+
+hsa_GOMF_sets <- msigdbr(
+  species = "Homo sapiens", 
+  category = "C5",
+  subcategory = "GO:MF") # for reactome collection
+
+hsa_reactome_sets <- msigdbr(
+  species = "Homo sapiens", 
+  category = "C2",
+  subcategory = "CP:REACTOME") # for reactome collection
+
+hsa_kegg_sets <- msigdbr(
+  species = "Homo sapiens", 
+  category = "C2",
+  subcategory = "CP:KEGG") # for KEGG collection
+
+hsa_wiki_sets <- msigdbr(
+  species = "Homo sapiens", 
+  category = "C2",
+  subcategory = "CP:WIKIPATHWAYS") # for Wikipathways collection
+
+set.seed(054057) # for reproducibility
+
+```
+
+
+```{r, fig.height = 15, fig.width = 15 }
+
+# GO
+
+gsea_results_GO <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_GOBP_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000)
+
+dotplot(gsea_results_GO, x = "NES", showCategory = 30)+ ggtitle("GSEA Gene Ontology LFC epithelial cells")
+gsea_results_GO_t <- as_tibble(gsea_results_GO)
+
+gsea_results_GO_t %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+gsea_results_GOMF <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_GOMF_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000)
+
+dotplot(gsea_results_GOMF, x = "NES", showCategory = 30)+ ggtitle("GSEA Gene Ontology LFC epithelial cells")
+
+gsea_GOMF_t = as_tibble(gsea_results_GOMF)
+
+gsea_GOMF_t %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+```
+
+### Reactome and Wikipathways
+
+```{r Epith Msigdb query, fig.height = 15, fig.width = 15}
+
+gsea_results_react <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_reactome_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000
+)
+
+dotplot(gsea_results_react, x = "NES", showCategory = 30)+ ggtitle("GSEA reactome LFC epithelial cells")
+gsea_results_react_t <- as_tibble(gsea_results_react)
+
+gsea_results_react_t %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+
+gsea_results_wiki <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE,
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    hsa_wiki_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000
+)
+
+dotplot(gsea_results_wiki, x = "NES", showCategory = 30)+ ggtitle("GSEA Wikipathway LFC epithelial cells")
+
+gsea_results_wiki_t <- as_tibble(gsea_results_wiki)
+
+gsea_results_wiki_t %>% 
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+```
+
+
+## Filtering on pval < 0,001
+
+```{r, fig.height = 7, fig.width = 8}
+
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.001 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.001&log2FoldChange>=1|
+                              padj<0.001&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  labs(col="Significantly expressed")+
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.001)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  geom_text_repel(max.overlaps = 30)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()
+
+
+```
+
+
+```{r}
+res_tbl1 = res_tbl1 %>% filter(padj <= 0.001)
+
+ordered_genes_fc <- res_tbl1$log2FoldChange
+names(ordered_genes_fc) <- res_tbl1$gene
+ordered_genes_fc <- sort(ordered_genes_fc, decreasing = T)
+
+```
+
+### Gene ontology (Biological process and Molecular function)
+
+```{r, fig.height = 15, fig.width = 15 }
+
+# GO
+
+gsea_results_GO1 <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_GOBP_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000)
+
+dotplot(gsea_results_GO1, x = "NES", showCategory = 30)+ ggtitle("GSEA Gene Ontology LFC epithelial cells")
+gsea_results_GO1_t <- as_tibble(gsea_results_GO1)
+
+cnetplot(gsea_results_GO1, foldChange=ordered_genes_fc, showCategory = 50,
+         cex_label_category = .5, cex_label_gene = .5)
+
+#emapplot(gsea_results_GO1, showCategory = 10)
+
+gsea_results_GO1_t %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+gsea_results_GOMF1 <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_GOMF_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000)
+
+dotplot(gsea_results_GOMF1, x = "NES", showCategory = 30)+ ggtitle("GSEA Gene Ontology LFC epithelial cells")
+cnetplot(gsea_results_GOMF1, foldChange=ordered_genes_fc, showCategory = 50,
+         cex_label_category = .5, cex_label_gene = .5)
+
+gsea_results_GOMF1_t <- as_tibble(gsea_results_GOMF1)
+
+gsea_results_GOMF1_t %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+```
+
+### Reactome and Wikipathways
+
+```{r , fig.height = 15, fig.width = 15}
+
+gsea_results_react1 <- GSEA(
+  geneList = ordered_genes_fc,
+  pvalueCutoff = 0.05,
+  eps = 0,
+  seed = TRUE,
+  pAdjustMethod = "BH",
+  TERM2GENE = dplyr::select(
+    hsa_reactome_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000
+)
+
+dotplot(gsea_results_react1, x = "NES", showCategory = 30)+ ggtitle("GSEA reactome LFC epithelial cells")
+cnetplot(gsea_results_react1, foldChange=ordered_genes_fc, showCategory = 50,
+         cex_label_category = .5, cex_label_gene = .5)
+gsea_results_react_t1 <- as_tibble(gsea_results_react1)
+
+gsea_results_react_t1 %>%
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+
+gsea_results_wiki1 <- GSEA(
+  geneList = ordered_genes_fc, 
+  pvalueCutoff = 0.05, 
+  eps = 0, 
+  seed = TRUE,
+  pAdjustMethod = "BH", 
+  TERM2GENE = dplyr::select(
+    hsa_wiki_sets,
+    gs_name,
+    gene_symbol
+  ),
+  nPermSimple = 10000
+)
+
+dotplot(gsea_results_wiki1, x = "NES", showCategory = 30)+ ggtitle("GSEA Wikipathway LFC epithelial cells")
+cnetplot(gsea_results_wiki1, foldChange=ordered_genes_fc, showCategory = 150,
+         cex_label_category = .5, cex_label_gene = .5)
+gsea_results_wiki_t1 <- as_tibble(gsea_results_wiki1)
+
+gsea_results_wiki_t1 %>% 
+  select(ID, setSize, NES, p.adjust, qvalue) %>%
+  knitr::kable()
+
+```
+
+## Test specific targets
+
+### Load the GO annotations for the antigen presenting pathway (GO:0019882)
+
+```{r}
+
+GO_antigen_pres = read_tsv("./data/GO0019882.tsv", col_names = F)
+colnames(GO_antigen_pres) = c("gene","uniprot","description","X1","GO_term",
+                              "relationship","source","taxon","X2","X3",
+                              "X4","X5","X6","X7","X8")
+
+```
+
+Highlight on the volcano plot of the genes found to be implicated in the antigen presenting pathway + table
+
+```{r, fig.height = 4, fig.width = 6}
+
+target = res_tbl1 %>% 
+  filter(gene%in%GO_antigen_pres$gene)
+
+
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.05&log2FoldChange>=1|
+                              padj<0.05&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  labs(col="Significantly expressed")+
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()+
+  geom_point(data=target, 
+             aes(x=log2FoldChange,y=-log10(padj)), 
+             color='blue',
+             size=0.5)+
+  geom_text_repel(data = target, size = 5, segment.color = "blue",
+                  max.overlaps = 50, min.segment.length = 0, color = "blue",
+                  box.padding = 0.5)+
+  theme(legend.title= element_blank())
+
+target %>% 
+  select(gene, log2FoldChange, padj, description) %>% 
+  knitr::kable()
+
+```
+
+
+# Crossing with immunopeptidomic data
+
+Table of the genes that could be found as proteins in the significantly enriched peptides in the immunopeptidomic data.
+
+```{r, }
+
+list = read_xlsx("./data/Peptidomics36_peptides_site clivage.xlsm", sheet = "enriched_pep")
+pep = read_xlsx("./data/Peptidomics36_peptides_site clivage.xlsm")
+
+pep = pep %>% 
+  filter(pep$Sequence%in%list$Enriched_pep)
+
+# Keep STAT from |STAT_HUMAN 
+# Select after the | and before the _HUMAN
+
+pep =
+  pep %>%
+  mutate(prot = str_match(pep$`Leading razor protein`, "\\|([^|]+)_HUMAN")[,2],
+         uniprot = str_match(pep$`Leading razor protein`, "(^tr|sp)\\|(.*?)\\|")[,3])
+
+prot_to_gene = readRDS("./data/hsapiens_annotations_230510.rds") %>% 
+  dplyr::select(gene, protID)
+
+pep = left_join(pep, prot_to_gene, by = c("uniprot"="protID"))
+
+common = 
+  res_tbl1 %>% 
+  filter(gene%in%pep$gene)
+
+print = common
+
+dim(common)
+
+print %>% 
+  dplyr::select(gene, log2FoldChange, padj, description) %>% 
+  knitr::kable()
+
+```
+
+# Crossing with the proteomics data
+
+```{r}
+
+data = read_xlsx("./data/BVDE_929_data.xlsx", sheet = "PeptideGroups")
+
+# Filtering out contaminants
+
+data = 
+  data %>% 
+  filter(Contaminant != "TRUE")
+
+# Reduce the number of rows to keep only the ones of interest
+
+data = data[,c(3:5,9,10:11,16:23,29:44)]
+
+# Filter out peptides which appear in <4 conditions
+
+cols = sapply(data[14:29], grepl, pattern = "Not.*{2,}")
+data = data[rowSums(cols) >= 3, ]
+
+# Filter out PSM <1
+
+data =
+  data %>% 
+  filter(!`# PSMs` < 1)
+
+data = left_join(data, prot_to_gene, by = c("Master Protein Accessions" = "protID"))
+data = 
+  data %>% 
+  filter(`Abundance Ratio Adj. P-Value: (F2, H2O2) / (F2, Non R)`<=0.05)
+
+common1 = 
+  res_tbl1 %>% 
+  filter(gene%in%data$gene)
+
+dim(common1)
+
+common1 %>% 
+  dplyr::select(gene, log2FoldChange, padj, description) %>% 
+  knitr::kable()
+```
+
+# Save the data and the environment
+
+```{r}
+
+save.image("./data_output/RWorkspace.RData")
+
+
+```
+
+# Session info
+
+```{r, echo=TRUE}
+
+sessionInfo()
+
+```
+

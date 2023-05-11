@@ -1,0 +1,32 @@
+{
+    "id": "79BCA516",
+    "path": null,
+    "project_path": null,
+    "type": "r_dataframe",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1683803763187.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "expression": "gsea_results_GOMF1_t",
+        "caption": "gsea_results_GOMF1_t",
+        "totalObservations": 15,
+        "displayedObservations": 15,
+        "variables": 11,
+        "cacheKey": "E0D1BF1D",
+        "object": "gsea_results_GOMF1_t",
+        "environment": "",
+        "contentUrl": "grid_resource/gridviewer.html?env=&obj=gsea_results_GOMF1_t&cache_key=E0D1BF1D&max_cols=50",
+        "preview": 0
+    },
+    "folds": "",
+    "lastKnownWriteTime": 4913785918546260037,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1683803763187,
+    "read_only": false,
+    "read_only_alternatives": []
+}

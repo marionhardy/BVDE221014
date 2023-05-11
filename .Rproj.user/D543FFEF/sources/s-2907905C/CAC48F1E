@@ -1,0 +1,32 @@
+{
+    "id": "CAC48F1E",
+    "path": null,
+    "project_path": null,
+    "type": "r_dataframe",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1683728932353.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "expression": "prots",
+        "caption": "prots",
+        "totalObservations": 28033,
+        "displayedObservations": 28033,
+        "variables": 49,
+        "cacheKey": "C8DF0AF7",
+        "object": "prots",
+        "environment": "",
+        "contentUrl": "grid_resource/gridviewer.html?env=&obj=prots&cache_key=C8DF0AF7&max_cols=50",
+        "preview": 0
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1683728909,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1683728932353,
+    "read_only": false,
+    "read_only_alternatives": []
+}

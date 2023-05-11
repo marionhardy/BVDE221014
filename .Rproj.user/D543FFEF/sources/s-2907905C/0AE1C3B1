@@ -1,0 +1,24 @@
+{
+    "id": "0AE1C3B1",
+    "path": "/Volumes/BVDE_MHY/R/Sophie_AMR/BVDE221014/DESeq2.R",
+    "project_path": "DESeq2.R",
+    "type": "r_source",
+    "hash": "3469310895",
+    "contents": "",
+    "dirty": false,
+    "created": 1683106162116.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "cursorPosition": "155,9",
+        "scrollLine": "129"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1683724975,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1683724975621,
+    "read_only": false,
+    "read_only_alternatives": []
+}

@@ -1,0 +1,52 @@
+# Merge .csv count files
+
+## Assumes you have received data from Raphaël Helaers
+# And you have an output like : "_ReadsPerGene.out.tab"
+# You need to add by hand a ".tsv" at the end of those files to make them
+# readable
+
+library(DESeq2)
+library(tidyverse)
+library(stringr)
+library(biomaRt)
+library(Hmisc)
+
+names = c("B1014_H2O2","B1014_NT","B1020_H2O2","B1020_NT","B1129A_H2O2",
+          "B1129A_NT","B1129B_H2O2","B1129B_NT")
+
+files = list.files("./data/", pattern = ".out.tab.tsv")
+
+for(i in 1:length(files)){
+  x = read_tsv(paste0("./data/",files[i]), col_names = F)
+  x = x[-c(1:5),-c(3,4)]
+  colnames(x) = c("ensembl_version",paste0(names[i]))
+  assign(names[i],x)
+}
+
+noquote(names) # Use that to quickly copy paste the names without the quotes
+
+counts <- list(B1014_H2O2,  B1014_NT,    B1020_H2O2 , B1020_NT ,   B1129A_H2O2,
+               B1129A_NT,   B1129B_H2O2, B1129B_NT  ) %>% 
+  reduce(full_join, by = "ensembl_version")
+
+# strrep = 
+#   sub(pattern = "\\.(.*)","",counts$ensembl)
+# 
+# counts$ensembl = strrep
+# counts = counts[!duplicated(counts$ensembl),]
+
+rownames(counts) = counts$ensembl_version
+
+write.csv(counts,"./data/AMR221014_counts.csv", row.names = T)
+
+# Create the coldata for the summarized experiment
+
+coldata <- data.frame(
+  dates =c(rep(c("B1014","B1020","1129A","1129B"),each = 2)),
+  condition = as.factor(rep(c("H2O2","ctrl"), 4)),
+  replicate=as.factor(rep(c(1),8)))
+
+rownames(coldata) <- colnames(counts)[-1]
+
+write.csv(coldata,"./data/coldata.csv")
+

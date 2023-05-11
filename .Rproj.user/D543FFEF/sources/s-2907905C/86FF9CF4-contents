@@ -1,0 +1,173 @@
+
+load("./data/result.Rdata")
+# data set in long format
+head(data)
+
+library(mlogit) # We are loading the mlogit package
+library(gmnl)
+
+load("result.Rdata") # We are loading the promoter's data
+
+# Conditional logit
+
+m0<-mlogit(choice~-1
+           +beef
+           +plantbased
+           +cultured
+           +price
+           +carbonfootprint
+           +fatpercentage
+           +taste
+           +appearance
+           +organiclabel
+           +D_Netherlands
+           +D_Romania,
+           data=ndata)
+summary(m0)
+wtp.gmnl(m0, wrt = "price")
+
+# M1, all attributes are random 
+
+m1<-mlogit(choice~-1
+           +beef
+           +plantbased
+           +cultured
+           +price
+           +carbonfootprint
+           +fatpercentage
+           +taste
+           +appearance
+           +organiclabel
+           +D_Netherlands
+           +D_Romania
+           +I_info_carbonfootprint
+           +I_info_beef
+           +I_info_plantbased
+           +I_info_cultured,
+           rpar=c(beef='n',
+                  plantbased='n',
+                  cultured='n',                     
+                  price='n',
+                  carbonfootprint='n',
+                  fatpercentage='n',
+                  taste='n',
+                  appearance='n',
+                  organiclabel='n',
+                  D_Netherlands='n',
+                  D_Romania='n',
+                  I_info_carbonfootprint='n',
+                  I_info_beef='n',
+                  I_info_plantbased='n',
+                  I_info_cultured='n'),
+           correlation=FALSE,
+           panel=TRUE,
+           Halton=NA,
+           R=2000,
+           print.level=1,
+           data=ndata)
+summary(m1)
+
+# 𝐵𝐼𝐶𝐿𝐿=−2𝐿𝐿+ln(𝑛)𝑁𝑝𝑎𝑟
+# -2*LL + ln(146 * N random parameters (here, 16)
+
+# Price fixed
+
+m2<-mlogit(choice~-1
+           +beef
+           +plantbased
+           +cultured
+           +price
+           +carbonfootprint
+           +fatpercentage
+           +taste
+           +appearance
+           +organiclabel
+           +D_Netherlands
+           +D_Romania
+           +I_info_carbonfootprint
+           +I_info_beef
+           +I_info_plantbased
+           +I_info_cultured,
+           rpar=c(beef='n',
+                  plantbased='n',
+                  cultured='n',                     
+                  carbonfootprint='n',
+                  fatpercentage='n',
+                  taste='n',
+                  appearance='n',
+                  organiclabel='n',
+                  D_Netherlands='n',
+                  D_Romania='n',
+                  I_info_carbonfootprint='n',
+                  I_info_beef='n',
+                  I_info_plantbased='n',
+                  I_info_cultured='n'),
+           correlation=FALSE,
+           panel=TRUE,
+           Halton=NA,
+           R=2000,
+           print.level=1,
+           data=ndata)
+summary(m2)
+
+# Estimating M3 with gml to get the willingness to pay
+
+m3<-gmnl(choice~-1
+         +beef
+         +plantbased
+         +cultured
+         +price
+         +carbonfootprint
+         +fatpercentage
+         +taste
+         +appearance
+         +organiclabel
+         +D_Netherlands
+         +D_Romania
+         +I_info_carbonfootprint
+         +I_info_beef
+         +I_info_plantbased
+         +I_info_cultured
+         |0|0|0|0,
+         model='mixl',
+         ranp=c(beef='n',
+                plantbased='n',
+                cultured='n',                     
+                carbonfootprint='n',
+                fatpercentage='n',
+                taste='n',
+                appearance='n',
+                organiclabel='n',
+                D_Netherlands='n',
+                D_Romania='n',
+                I_info_carbonfootprint='n',
+                I_info_beef='n',
+                I_info_plantbased='n',
+                I_info_cultured='n'),
+         correlation=FALSE,
+         panel=TRUE,
+         halton=NA,
+         gradient=TRUE,
+         R=2000,
+         data=ndata2)
+summary(m3)
+wtp.gmnl(m3,wrt="price")
+
+
+save.image("./data/RWorkspace.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

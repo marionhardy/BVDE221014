@@ -1,0 +1,24 @@
+{
+    "id": "A787A58C",
+    "path": "/Volumes/BVDE_MHY/R/Sophie_AMR/BVDE221014/Biomart_annotations_hspaiens_grch38.R",
+    "project_path": "Biomart_annotations_hspaiens_grch38.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1683726631855.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "cursorPosition": "27,0",
+        "scrollLine": "6"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1683727974,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1683727974619,
+    "read_only": false,
+    "read_only_alternatives": []
+}
