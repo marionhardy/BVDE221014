@@ -25,9 +25,10 @@ library(readxl)
 
 ```{r Data loading, include=FALSE}
 
-res_tbl <- read_csv("./data_output/res_tbl.csv")
+res_tbl <- read_csv("./data_output/res_tbl.csv") %>% filter(!is.na(ENTREZID), !duplicated(gene, drop = FALSE))
 diff <- read_csv("./data_output/sign_different.csv")
-res_tbl1 <-  res_tbl %>% filter(!is.na(ENTREZID), padj<0.05)
+res_tbl1 <-  res_tbl %>% filter(!is.na(ENTREZID), padj<0.05,
+                                !duplicated(gene, drop = FALSE))
 
 ```
 
@@ -42,10 +43,10 @@ Data from Sophie's samples (human cells)
 
 # Volcano plot 
 
-```{r, fig.height = 12, fig.width = 15}
+```{r, fig.height = 8, fig.width = 12}
 
 res_tbl %>%
-  filter(!is.na(padj)) %>%
+  filter(!is.na(padj),!duplicated(gene, drop = FALSE)) %>%
   ggplot(aes(x = log2FoldChange, y = -log10(padj),
              color = padj < 0.05 & abs(log2FoldChange) > 1, 
              label = ifelse(padj<0.05&log2FoldChange>=1|
@@ -60,8 +61,82 @@ res_tbl %>%
   labs(title = "H2O2 vs NT")+
   theme_bw()
 
+## avec les points en bleu et rouge
+
+outliers = res_tbl %>% 
+  filter(padj < 0.05 & log2FoldChange<=-1|padj < 0.05 &log2FoldChange>=1)
+
+up = res_tbl %>% filter(padj <= 0.05 & log2FoldChange >= 1)
+down = res_tbl %>% filter(padj <= 0.05 & log2FoldChange <= -1)
+
+res_tbl %>%
+  filter(!is.na(padj),!duplicated(gene, drop = FALSE)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),label = gene)) +
+  geom_point(size = 0.5, color = "gray") +
+  geom_point(data = res_tbl %>% filter(padj <= 0.05 & log2FoldChange >= 1), size= 0.5, color = "firebrick3")+
+  geom_point(data = res_tbl %>% filter(padj <= 0.05 & log2FoldChange <= -1), size= 0.5, color = "blue")+
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  geom_label_repel(data = subset(res_tbl, gene%in%up$gene),
+                  box.padding   = 0.35,
+                  point.padding = 0.5,
+                  color = "firebrick3",
+                  segment.color = 'grey50',
+                  max.overlaps = 30)+
+  geom_label_repel(data = subset(res_tbl, gene%in%down$gene),
+                  box.padding   = 0.35,
+                  point.padding = 0.5,
+                  color = "blue",
+                  segment.color = 'grey50',
+                  max.overlaps = 30)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()
+
+## Pour label que tes points d'intérêts, utilise le code ci-dessous
+
+targetup = c("ELF1", "PDCD4")
+targetdown = c("NDUFA3")
+
+res_tbl %>%
+  filter(!is.na(padj),!duplicated(gene, drop = FALSE)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),label = gene)) +
+  geom_point(size = 0.5, color = "gray") +
+  geom_point(data = up, size= 0.5, color = "firebrick3")+
+  geom_point(data = down, size= 0.5, color = "blue")+
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  geom_label_repel(data = subset(up, gene%in% targetup),
+                  box.padding   = 0.35,
+                  color = "firebrick3",
+                  point.padding = 0.5,
+                  segment.color = 'grey50',
+                  max.overlaps = 30)+
+  geom_label_repel(data = subset(down, gene%in% targetdown),
+                  box.padding   = 0.35,
+                  color = "blue",
+                  point.padding = 0.5,
+                  segment.color = 'grey50',
+                  max.overlaps = 30)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()
 
 ```
+
+Getting some stats yay
+
+```{r, echo=TRUE}
+
+table(res_tbl$padj<=0.05) # significant genes
+
+table(res_tbl$padj<=0.05&res_tbl$log2FoldChange<=-1) # signif and downreg
+
+table(res_tbl$padj<=0.05&res_tbl$log2FoldChange>=1) # signif and upreg
+
+
+```
+
 
 # GSEA analysis
 
@@ -163,7 +238,7 @@ gsea_GOMF_t %>%
 
 ### Reactome and Wikipathways
 
-```{r Epith Msigdb query, fig.height = 15, fig.width = 15}
+```{r Epith Msigdb query, fig.height = 6, fig.width = 6}
 
 gsea_results_react <- GSEA(
   geneList = ordered_genes_fc,
@@ -356,24 +431,120 @@ gsea_results_wiki_t1 %>%
 
 ## Test specific targets
 
-### Load the GO annotations for the antigen presenting pathway (GO:0019882)
+
+- Ajouter les genes sets concernant :
+a) la machinerie UPR
+b) les familles d’oxydo-réduction (enzymes NOX, TXN, reduction du glutathion…)
+c) Machinerie de presentation (CRT, TAP; proteasome…)
+
+### The antigen presenting pathway (GO:0019882)
 
 ```{r}
 
-GO_antigen_pres = read_tsv("./data/GO0019882.tsv", col_names = F)
-colnames(GO_antigen_pres) = c("gene","uniprot","description","X1","GO_term",
+GO_ag = read_tsv("./data/GO0019882.tsv", col_names = F)
+colnames(GO_ag) = c("gene","uniprot","description","X1","GO_term",
                               "relationship","source","taxon","X2","X3",
                               "X4","X5","X6","X7","X8")
 
 ```
 
-Highlight on the volcano plot of the genes found to be implicated in the antigen presenting pathway + table
+Highlight on the volcano plot of the genes found to be implicated in the endoplasmic reticulum unfolded protein response + table
 
 ```{r, fig.height = 4, fig.width = 6}
 
 target = res_tbl1 %>% 
-  filter(gene%in%GO_antigen_pres$gene)
+  filter(gene%in%GO_ag$gene, ignore.case = TRUE)
 
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.05&log2FoldChange>=1|
+                              padj<0.05&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  labs(col="Significantly expressed")+
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()+
+  geom_point(data=target, 
+             aes(x=log2FoldChange,y=-log10(padj)), 
+             color='blue',
+             size=0.5)+
+  geom_text_repel(data = target, size = 5, segment.color = "blue",
+                  max.overlaps = 50, min.segment.length = 0, color = "blue",
+                  box.padding = 0.5)+
+  theme(legend.title= element_blank())
+
+target %>% 
+  select(gene, log2FoldChange, padj, description) %>% 
+  knitr::kable()
+
+```
+
+### The endoplasmic reticulum unfolded protein response GO:0030968
+
+```{r}
+
+GO_upr = read_tsv("./data/GO0030968_upr.txt")
+GO_upr$Symbol_up = toupper(GO_upr$Symbol)
+
+```
+
+Highlight on the volcano plot of the genes found to be implicated in the endoplasmic reticulum unfolded protein response + table
+
+```{r, fig.height = 8, fig.width = 12}
+
+target = res_tbl1 %>% 
+  filter(gene%in%GO_upr$Symbol_up)
+
+res_tbl %>%
+  filter(!is.na(padj)) %>%
+  ggplot(aes(x = log2FoldChange, y = -log10(padj),
+             color = padj < 0.05 & abs(log2FoldChange) > 1, 
+             label = ifelse(padj<0.05&log2FoldChange>=1|
+                              padj<0.05&log2FoldChange<=-1,as.character(gene),''))) +
+  scale_colour_manual(values = c("gray", "firebrick3")) +
+  labs(col="Significantly expressed")+
+  geom_point(size = 0.5) +
+  geom_hline(yintercept = -log10(0.05)) +
+  geom_vline(xintercept = 1) +
+  geom_vline(xintercept = -1)+
+  labs(title = "H2O2 vs NT")+
+  theme_bw()+
+  geom_point(data=target, 
+             aes(x=log2FoldChange,y=-log10(padj)), 
+             color='blue',
+             size=0.5)+
+  geom_text_repel(data = target, size = 5, segment.color = "blue",
+                  max.overlaps = 50, min.segment.length = 0, color = "blue",
+                  box.padding = 0.5)+
+  theme(legend.title= element_blank())
+
+target %>% 
+  select(gene, log2FoldChange, padj, description) %>% 
+  knitr::kable()
+
+```
+
+
+### Oxidoreductase activity GO:0016491
+
+```{r}
+
+GO_redox = read_tsv("./data/GO001649_redox.txt")
+GO_redox$Symbol_up = toupper(GO_redox$Symbol)
+
+```
+
+Highlight on the volcano plot of the genes found to be implicated in redox + table
+
+```{r, fig.height = 8, fig.width = 12}
+
+target = res_tbl1 %>% 
+  filter(gene%in%GO_redox$Symbol_up)
 
 res_tbl %>%
   filter(!is.na(padj)) %>%
@@ -492,7 +663,6 @@ common1 %>%
 ```{r}
 
 save.image("./data_output/RWorkspace.RData")
-
 
 ```
 
